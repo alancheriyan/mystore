@@ -14,32 +14,46 @@ import {
   Card,
   Grid,
 } from "antd";
+import { useNavigate } from "react-router-dom";
 import { useProducts } from "../context/ProductsContext";
+import { HomeOutlined } from "@ant-design/icons";
 
 const { Option } = Select;
 const { useBreakpoint } = Grid;
 
 export default function AdminPage() {
-  const { products, addProduct, updateProduct, deleteProduct, toggleHold } = useProducts();
+  const { products, addProduct, updateProduct, deleteProduct, toggleHold } =
+    useProducts();
   const [editingProduct, setEditingProduct] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const screens = useBreakpoint();
   const isMobile = !screens.md;
+  const nav = useNavigate();
 
   const handleSave = async (values) => {
-    if (!values.image) {
-      message.error("Please provide a Google Drive link");
-      return;
+    const cleanValues = {
+      ...values,
+      short: values.short || "",
+      rating: parseFloat(values.rating ?? 0),
+      sequence: parseInt(values.sequence ?? 0, 10),
+      clicks: editingProduct?.clicks || 0,
+      onHold: editingProduct?.onHold || false,
+    };
+
+    try {
+      if (editingProduct) {
+        await updateProduct(editingProduct.id, cleanValues);
+        message.success("Product updated");
+      } else {
+        await addProduct(cleanValues);
+        message.success("Product added");
+      }
+      setModalVisible(false);
+      setEditingProduct(null);
+    } catch (error) {
+      console.error("Error saving product:", error);
+      message.error("Error saving product");
     }
-    if (editingProduct) {
-      await updateProduct(editingProduct.id, values);
-      message.success("Product updated");
-    } else {
-      await addProduct(values);
-      message.success("Product added");
-    }
-    setModalVisible(false);
-    setEditingProduct(null);
   };
 
   const columns = [
@@ -55,16 +69,26 @@ export default function AdminPage() {
     },
     { title: "Category", dataIndex: "category" },
     { title: "Price", dataIndex: "price", render: (p) => `$${p}` },
+    { title: "Rating", dataIndex: "rating", render: (r) => r ?? 0 },
+    { title: "Seq", dataIndex: "sequence", render: (s) => s ?? 0 },
     { title: "Clicks", dataIndex: "clicks", render: (c) => <Tag color="blue">{c || 0}</Tag> },
     {
       title: "Actions",
       render: (_, record) => (
         <Space wrap>
-          <Button type="link" onClick={() => { setEditingProduct(record); setModalVisible(true); }}>
+          <Button
+            type="link"
+            onClick={() => {
+              setEditingProduct(record);
+              setModalVisible(true);
+            }}
+          >
             Edit
           </Button>
           <Popconfirm title="Delete?" onConfirm={() => deleteProduct(record.id)}>
-            <Button type="link" danger>Delete</Button>
+            <Button type="link" danger>
+              Delete
+            </Button>
           </Popconfirm>
           <Button type="link" onClick={() => toggleHold(record.id)}>
             {record.onHold ? "Unhold" : "Hold"}
@@ -76,12 +100,32 @@ export default function AdminPage() {
 
   return (
     <div style={{ padding: 16 }}>
-      <h2 style={{ marginBottom: 16 }}>Admin - Manage Products</h2>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          marginBottom: 16,
+          flexWrap: "wrap",
+          gap: 8,
+        }}
+      >
+        <h2 style={{ margin: 0 }}>Admin - Manage Products</h2>
+
+       {/* 🔹 Back to Home (Icon Button) */}
+        <Button
+          type="text"
+          icon={<HomeOutlined style={{ fontSize: 20 }} />}
+          onClick={() => nav("/")}
+        />
+      </div>
 
       <Button
         type="primary"
         style={{ marginBottom: 16 }}
-        onClick={() => { setEditingProduct(null); setModalVisible(true); }}
+        onClick={() => {
+          setEditingProduct(null);
+          setModalVisible(true);
+        }}
         block={isMobile}
       >
         Add Product
@@ -109,11 +153,27 @@ export default function AdminPage() {
             >
               <p><b>Category:</b> {record.category}</p>
               <p><b>Price:</b> ${record.price}</p>
-              <img src={record.image} alt={record.title} style={{ width: "100%", marginBottom: 8 }} />
+              <p><b>Rating:</b> {record.rating ?? 0}</p>
+              <p><b>Seq:</b> {record.sequence ?? 0}</p>
+              <img
+                src={record.image}
+                alt={record.title}
+                style={{ width: "100%", marginBottom: 8 }}
+              />
               <Space wrap>
-                <Button size="small" onClick={() => { setEditingProduct(record); setModalVisible(true); }}>Edit</Button>
+                <Button
+                  size="small"
+                  onClick={() => {
+                    setEditingProduct(record);
+                    setModalVisible(true);
+                  }}
+                >
+                  Edit
+                </Button>
                 <Popconfirm title="Delete?" onConfirm={() => deleteProduct(record.id)}>
-                  <Button size="small" danger>Delete</Button>
+                  <Button size="small" danger>
+                    Delete
+                  </Button>
                 </Popconfirm>
                 <Button size="small" onClick={() => toggleHold(record.id)}>
                   {record.onHold ? "Unhold" : "Hold"}
@@ -132,7 +192,13 @@ export default function AdminPage() {
       >
         <Form
           layout="vertical"
-          initialValues={editingProduct || { category: "Tech & Gadgets", price: 0 }}
+          initialValues={
+            editingProduct || {
+              category: "Tech & Gadgets",
+              price: 0,
+              rating: 0,
+            }
+          }
           onFinish={handleSave}
         >
           <Form.Item name="title" label="Title" rules={[{ required: true }]}>
@@ -141,22 +207,49 @@ export default function AdminPage() {
           <Form.Item name="category" label="Category">
             <Select>
               {["Tech & Gadgets", "Home & Kitchen", "Fitness", "Outdoors", "Beauty"].map((c) => (
-                <Option key={c} value={c}>{c}</Option>
+                <Option key={c} value={c}>
+                  {c}
+                </Option>
               ))}
             </Select>
           </Form.Item>
           <Form.Item name="price" label="Price" rules={[{ required: true }]}>
             <InputNumber min={0} style={{ width: "100%" }} />
           </Form.Item>
+          <Form.Item name="rating" label="Rating (0–5, decimals allowed)">
+            <InputNumber min={0} max={5} step={0.1} style={{ width: "100%" }} />
+          </Form.Item>
+          <Form.Item name="sequence" label="Sequence">
+            <InputNumber min={0} step={10} style={{ width: "100%" }} />
+          </Form.Item>
           <Form.Item name="short" label="Short Description">
             <Input.TextArea rows={3} />
           </Form.Item>
-          <Form.Item name="image" label="Google Drive Image Link" rules={[{ required: true }]}>
+          <Form.Item
+            name="image"
+            label="Google Drive Image Link"
+            rules={[{ required: true }]}
+          >
             <Input placeholder="Paste your Google Drive share link here" />
           </Form.Item>
+          <Form.Item
+            name="affiliateUrl"
+            label="Affiliate URL"
+            rules={[{ required: true }]}
+          >
+            <Input placeholder="Paste affiliate link here" />
+          </Form.Item>
+
           <div style={{ textAlign: "right" }}>
-            <Button onClick={() => setModalVisible(false)} style={{ marginRight: 8 }}>Cancel</Button>
-            <Button type="primary" htmlType="submit">Save</Button>
+            <Button
+              onClick={() => setModalVisible(false)}
+              style={{ marginRight: 8 }}
+            >
+              Cancel
+            </Button>
+            <Button type="primary" htmlType="submit">
+              Save
+            </Button>
           </div>
         </Form>
       </Modal>
