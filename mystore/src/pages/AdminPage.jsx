@@ -14,7 +14,6 @@ import {
   Card,
   Grid,
 } from "antd";
-import { sampleCategories } from "../data/sampleData";
 import { useProducts } from "../context/ProductsContext";
 
 const { Option } = Select;
@@ -24,16 +23,19 @@ export default function AdminPage() {
   const { products, addProduct, updateProduct, deleteProduct, toggleHold } = useProducts();
   const [editingProduct, setEditingProduct] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
-
   const screens = useBreakpoint();
   const isMobile = !screens.md;
 
-  const handleSave = (values) => {
+  const handleSave = async (values) => {
+    if (!values.image) {
+      message.error("Please provide a Google Drive link");
+      return;
+    }
     if (editingProduct) {
-      updateProduct(editingProduct.id, values);
+      await updateProduct(editingProduct.id, values);
       message.success("Product updated");
     } else {
-      addProduct(values);
+      await addProduct(values);
       message.success("Product added");
     }
     setModalVisible(false);
@@ -57,14 +59,12 @@ export default function AdminPage() {
     {
       title: "Actions",
       render: (_, record) => (
-        <Space>
+        <Space wrap>
           <Button type="link" onClick={() => { setEditingProduct(record); setModalVisible(true); }}>
             Edit
           </Button>
           <Popconfirm title="Delete?" onConfirm={() => deleteProduct(record.id)}>
-            <Button type="link" danger>
-              Delete
-            </Button>
+            <Button type="link" danger>Delete</Button>
           </Popconfirm>
           <Button type="link" onClick={() => toggleHold(record.id)}>
             {record.onHold ? "Unhold" : "Hold"}
@@ -81,16 +81,12 @@ export default function AdminPage() {
       <Button
         type="primary"
         style={{ marginBottom: 16 }}
-        onClick={() => {
-          setEditingProduct(null);
-          setModalVisible(true);
-        }}
+        onClick={() => { setEditingProduct(null); setModalVisible(true); }}
         block={isMobile}
       >
         Add Product
       </Button>
 
-      {/* ✅ Desktop: Table view */}
       {!isMobile ? (
         <Table
           rowKey="id"
@@ -99,7 +95,6 @@ export default function AdminPage() {
           pagination={{ pageSize: 6 }}
         />
       ) : (
-        /* ✅ Mobile: Card view */
         <div style={{ display: "grid", gap: 12 }}>
           {products.map((record) => (
             <Card
@@ -112,20 +107,13 @@ export default function AdminPage() {
               }
               extra={<Tag color="blue">{record.clicks || 0} clicks</Tag>}
             >
-              <p>
-                <b>Category:</b> {record.category}
-              </p>
-              <p>
-                <b>Price:</b> ${record.price}
-              </p>
+              <p><b>Category:</b> {record.category}</p>
+              <p><b>Price:</b> ${record.price}</p>
+              <img src={record.image} alt={record.title} style={{ width: "100%", marginBottom: 8 }} />
               <Space wrap>
-                <Button size="small" onClick={() => { setEditingProduct(record); setModalVisible(true); }}>
-                  Edit
-                </Button>
+                <Button size="small" onClick={() => { setEditingProduct(record); setModalVisible(true); }}>Edit</Button>
                 <Popconfirm title="Delete?" onConfirm={() => deleteProduct(record.id)}>
-                  <Button size="small" danger>
-                    Delete
-                  </Button>
+                  <Button size="small" danger>Delete</Button>
                 </Popconfirm>
                 <Button size="small" onClick={() => toggleHold(record.id)}>
                   {record.onHold ? "Unhold" : "Hold"}
@@ -136,7 +124,6 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Add/Edit Modal */}
       <Modal
         title={editingProduct ? "Edit Product" : "Add Product"}
         open={modalVisible}
@@ -153,10 +140,8 @@ export default function AdminPage() {
           </Form.Item>
           <Form.Item name="category" label="Category">
             <Select>
-              {sampleCategories.filter((c) => c !== "All").map((c) => (
-                <Option key={c} value={c}>
-                  {c}
-                </Option>
+              {["Tech & Gadgets", "Home & Kitchen", "Fitness", "Outdoors", "Beauty"].map((c) => (
+                <Option key={c} value={c}>{c}</Option>
               ))}
             </Select>
           </Form.Item>
@@ -166,13 +151,12 @@ export default function AdminPage() {
           <Form.Item name="short" label="Short Description">
             <Input.TextArea rows={3} />
           </Form.Item>
+          <Form.Item name="image" label="Google Drive Image Link" rules={[{ required: true }]}>
+            <Input placeholder="Paste your Google Drive share link here" />
+          </Form.Item>
           <div style={{ textAlign: "right" }}>
-            <Button onClick={() => setModalVisible(false)} style={{ marginRight: 8 }}>
-              Cancel
-            </Button>
-            <Button type="primary" htmlType="submit">
-              Save
-            </Button>
+            <Button onClick={() => setModalVisible(false)} style={{ marginRight: 8 }}>Cancel</Button>
+            <Button type="primary" htmlType="submit">Save</Button>
           </div>
         </Form>
       </Modal>

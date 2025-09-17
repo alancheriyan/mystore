@@ -1,48 +1,77 @@
-import { createContext, useContext, useState } from "react";
-import { sampleProducts } from "../data/sampleData";
+import { createContext, useContext, useEffect, useState } from "react";
+import { db } from "../firebase";
+import {
+  collection,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  onSnapshot,
+} from "firebase/firestore";
 
 const ProductsContext = createContext();
 
 export function ProductsProvider({ children }) {
-  const [products, setProducts] = useState(sampleProducts);
+  const [products, setProducts] = useState([]);
 
-  // Add new product
-  const addProduct = (product) => {
-    const newProduct = { ...product, id: `p-${Date.now()}`, clicks: 0, onHold: false };
-    setProducts((prev) => [...prev, newProduct]);
+  // Fetch products live from Firestore
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, "products"), (snapshot) => {
+      setProducts(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+    });
+    return () => unsub();
+  }, []);
+
+  // Helper: Convert Google Drive link → direct image
+  const normalizeImageLink = (link) => {
+    try {
+      const match = link.match(/[-\w]{25,}/); // extract fileId
+      return match
+        ? `https://drive.google.com/uc?export=view&id=${match[0]}`
+        : link;
+    } catch {
+      return link;
+    }
   };
 
-  // Update existing product
-  const updateProduct = (id, updated) => {
-    setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, ...updated } : p)));
+  const addProduct = async (product) => {
+    const cleanProduct = {
+      ...product,
+      image: normalizeImageLink(product.image),
+      clicks: 0,
+      onHold: false,
+    };
+    await addDoc(collection(db, "products"), cleanProduct);
   };
 
-  // Delete
-  const deleteProduct = (id) => {
-    setProducts((prev) => prev.filter((p) => p.id !== id));
+  const updateProduct = async (id, product) => {
+    const cleanProduct = {
+      ...product,
+      image: normalizeImageLink(product.image),
+    };
+    await updateDoc(doc(db, "products", id), cleanProduct);
   };
 
-  // Hold/Unhold
-  const toggleHold = (id) => {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, onHold: !p.onHold } : p))
-    );
+  const deleteProduct = async (id) => {
+    await deleteDoc(doc(db, "products", id));
   };
 
-  // Track click
-  const incrementClick = (id) => {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, clicks: (p.clicks || 0) + 1 } : p))
-    );
+  const toggleHold = async (id) => {
+    const product = products.find((p) => p.id === id);
+    if (product) {
+      await updateDoc(doc(db, "products", id), { onHold: !product.onHold });
+    }
   };
 
   return (
     <ProductsContext.Provider
-      value={{ products, addProduct, updateProduct, deleteProduct, toggleHold, incrementClick }}
+      value={{ products, addProduct, updateProduct, deleteProduct, toggleHold }}
     >
       {children}
     </ProductsContext.Provider>
   );
 }
 
-export const useProducts = () => useContext(ProductsContext);
+export function useProducts() {
+  return useContext(ProductsContext);
+}
