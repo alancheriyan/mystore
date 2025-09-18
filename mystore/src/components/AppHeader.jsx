@@ -37,7 +37,7 @@ export default function AppHeader({ onSearch, onToggleSider }) {
           <ShoppingOutlined style={{ fontSize: 22, color: "#1890ff" }} />
           {!isMobile && (
             <Title level={4} style={{ margin: 0 }}>
-              AffiliateHub
+              Deal Snap
             </Title>
           )}
         </Link>

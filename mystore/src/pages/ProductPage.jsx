@@ -19,10 +19,19 @@ export default function ProductPage() {
     );
   }
 
-  const handleBuyNow = () => {
-    incrementClick(product.id); // ✅ track click
-    window.open(product.affiliateUrl, "_blank", "noopener,noreferrer"); // ✅ redirect
-  };
+const normalizeUrl = (url) => {
+  if (!url) return "#";
+  return url.startsWith("http://") || url.startsWith("https://")
+    ? url
+    : `https://${url}`;
+};
+
+const handleBuyNow = () => {
+  incrementClick(product.id); // track click
+  const url = normalizeUrl(product.affiliateUrl);
+  debugger;
+  window.open(url, "_blank", "noopener,noreferrer"); // safe redirect
+};
 
   return (
     <div style={{ padding: 24, maxWidth: 1200, margin: "0 auto" }}>

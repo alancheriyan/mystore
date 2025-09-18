@@ -101,7 +101,7 @@ export function ProductsProvider({ children }) {
   };
 
   // 🔹 Increment clicks (when affiliate link clicked)
-  const incrementClicks = async (id) => {
+  const incrementClick = async (id) => {
     await updateDoc(doc(db, "products", id), {
       clicks: increment(1),
     });
@@ -116,7 +116,7 @@ export function ProductsProvider({ children }) {
         updateProduct,
         deleteProduct,
         toggleHold,
-        incrementClicks,
+        incrementClick,
       }}
     >
       {children}
