@@ -13,6 +13,11 @@ export default function ProductCard({ product }) {
     : `https://${url}`;
 };
 
+const truncateText = (text, length = 20) => {
+    if (!text) return "";
+    return text.length > length ? text.slice(0, length) + "..." : text;
+  };
+
   return (
     <Card
   hoverable
@@ -44,7 +49,9 @@ export default function ProductCard({ product }) {
         title={
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <span>{product.title}</span>
-            <Tag>{product.category}</Tag>
+             <div style={{ marginTop: 4 }}>
+              <Tag>{product.category}</Tag>
+            </div>
           </div>
         }
         description={
@@ -57,7 +64,8 @@ export default function ProductCard({ product }) {
           >
             <div>
               <Rate disabled allowHalf defaultValue={product.rating} />
-              <div style={{ fontSize: 12, color: "#666" }}>{product.short}</div>
+              <div style={{ fontSize: 12, color: "#666" }}>  
+                {truncateText(product.short, 20)}</div>
             </div>
             <div style={{ textAlign: "right" }}>
               <div style={{ fontWeight: 600 }}>{formatPrice(product.price)}</div>

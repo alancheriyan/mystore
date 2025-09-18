@@ -1,5 +1,5 @@
-import { useParams, useNavigate } from "react-router-dom";
-import { Button, Col, Row, Typography, Rate, Tag, Space } from "antd";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { Button, Col, Row, Typography, Rate, Tag, Space, Card } from "antd";
 import { useProducts } from "../context/ProductsContext";
 
 const { Title, Paragraph } = Typography;
@@ -19,45 +19,48 @@ export default function ProductPage() {
     );
   }
 
-const normalizeUrl = (url) => {
-  if (!url) return "#";
-  return url.startsWith("http://") || url.startsWith("https://")
-    ? url
-    : `https://${url}`;
-};
+  const normalizeUrl = (url) => {
+    if (!url) return "#";
+    return url.startsWith("http://") || url.startsWith("https://")
+      ? url
+      : `https://${url}`;
+  };
 
-const handleBuyNow = () => {
-  incrementClick(product.id); // track click
-  const url = normalizeUrl(product.affiliateUrl);
-  debugger;
-  window.open(url, "_blank", "noopener,noreferrer"); // safe redirect
-};
+  const handleBuyNow = () => {
+    incrementClick(product.id); // track click
+    const url = normalizeUrl(product.affiliateUrl);
+    window.open(url, "_blank", "noopener,noreferrer"); // safe redirect
+  };
+
+  // Related products (same category, excluding current product)
+  const related = products
+    .filter((p) => p.category === product.category && p.id !== product.id)
+    .slice(0, 4); // show max 4
 
   return (
     <div style={{ padding: 24, maxWidth: 1200, margin: "0 auto" }}>
       <Row gutter={[32, 32]} align="top">
         {/* Image */}
-        <Col xs={24} md={12}>
-          <img
-            src={product.image}
-            alt={product.title}
-            style={{
-              width: "100%",
-              borderRadius: 12,
-              objectFit: "cover",
-              maxHeight: 500,
-            }}
-          />
+        <Col xs={24} md={10}>
+          <div style={{ textAlign: "center" }}>
+            <img
+              src={product.image}
+              alt={product.title}
+              style={{
+                width: "100%",
+                maxWidth: 400,
+                borderRadius: 12,
+                objectFit: "contain",
+                maxHeight: 400,
+              }}
+            />
+          </div>
         </Col>
 
         {/* Details */}
-        <Col xs={24} md={12}>
-          <Space
-            direction="vertical"
-            size="large"
-            style={{ width: "100%" }}
-          >
-            <Title level={2} style={{ marginBottom: 0 }}>
+        <Col xs={24} md={14}>
+          <Space direction="vertical" size="large" style={{ width: "100%" }}>
+            <Title level={4} style={{ marginBottom: 0 }}>
               {product.title}
             </Title>
 
@@ -99,6 +102,45 @@ const handleBuyNow = () => {
           </Space>
         </Col>
       </Row>
+
+      {/* Related Products */}
+      {related.length > 0 && (
+        <div style={{ marginTop: 48 }}>
+          <Title level={3}>Related Products</Title>
+          <Row gutter={[16, 16]}>
+            {related.map((r) => (
+              <Col key={r.id} xs={12} md={6}>
+                <Card
+                  hoverable
+                  cover={
+                    <img
+                      alt={r.title}
+                      src={r.image}
+                      style={{
+                        height: 160,
+                        objectFit: "contain",
+                        padding: 8,
+                        background: "#fafafa",
+                      }}
+                    />
+                  }
+                >
+                  <Card.Meta
+                    title={
+                      <Link to={`/product/${r.id}`}>
+                        {r.title.length > 25
+                          ? r.title.slice(0, 25) + "..."
+                          : r.title}
+                      </Link>
+                    }
+                    description={`$${r.price}`}
+                  />
+                </Card>
+              </Col>
+            ))}
+          </Row>
+        </div>
+      )}
     </div>
   );
 }
